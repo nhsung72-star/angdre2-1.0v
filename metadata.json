@@ -1,0 +1,10 @@
+{
+  "name": "앙드레2-1.0v",
+  "description": "연령대, 스타일, 오늘 날씨에 맞춰 옷차림을 추천해 주는 앙드레2 앱입니다.",
+  "requestFramePermissions": [
+    "geolocation"
+  ],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}

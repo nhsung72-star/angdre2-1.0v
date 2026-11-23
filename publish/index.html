@@ -1,0 +1,1566 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>앙드레2 — 나에게 맞는 오늘의 옷차림</title>
+    <meta
+      name="description"
+      content="연령대, 스타일, 오늘 날씨에 맞춰 옷차림을 추천해 주는 앙드레2 앱입니다."
+    />
+    <meta property="og:title" content="앙드레2 — 나에게 맞는 오늘의 옷차림" />
+    <meta
+      property="og:description"
+      content="연령대, 스타일, 오늘 날씨에 맞춰 옷차림을 추천해 주는 앙드레2 앱입니다."
+    />
+    <meta property="og:type" content="website" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@500;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+      html {
+        font-family: "Plus Jakarta Sans", "Noto Sans KR", -apple-system,
+          BlinkMacSystemFont, "Apple SD Gothic Neo", sans-serif;
+        background-color: #f8f7f4;
+        color: #18181b;
+        -webkit-tap-highlight-color: transparent;
+      }
+
+      body {
+        margin: 0;
+        min-height: 100dvh;
+        background-color: #f8f7f4;
+        color: #18181b;
+        line-height: 1.5;
+      }
+
+      .text-balance {
+        text-wrap: balance;
+      }
+
+      @media (prefers-reduced-motion: reduce) {
+        *,
+        *::before,
+        *::after {
+          animation-duration: 0.01ms !important;
+          animation-iteration-count: 1 !important;
+          transition-duration: 0.01ms !important;
+          scroll-behavior: auto !important;
+        }
+      }
+    </style>
+    <script
+      crossorigin
+      src="https://cdn.jsdelivr.net/npm/react@18.3.1/umd/react.production.min.js"
+    ></script>
+    <script
+      crossorigin
+      src="https://cdn.jsdelivr.net/npm/react-dom@18.3.1/umd/react-dom.production.min.js"
+    ></script>
+    <script src="https://cdn.jsdelivr.net/npm/@babel/standalone@7.26.10/babel.min.js"></script>
+  </head>
+  <body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+      const { useCallback, useEffect, useMemo, useRef, useState } = React;
+
+      // ---- 데이터: 연령대, 성별, 스타일 ----
+      const AGE_GROUPS = ['20대', '30대', '40대', '50대', '60대', '70대 이상'];
+      const GENDERS = ['여성', '남성', '선택 안 함'];
+      const OUTFIT_STYLES = [
+        {
+          id: 'casual',
+          name: '편안한 캐주얼',
+          description: '동네 산책·장보기, 편하고 무난하게',
+        },
+        {
+          id: 'neat',
+          name: '단정한 외출복',
+          description: '모임·병원·관공서, 깔끔하게',
+        },
+        {
+          id: 'active',
+          name: '활동적인 운동복',
+          description: '걷기·등산·운동, 가볍고 따뜻하게',
+        },
+        {
+          id: 'classic',
+          name: '차분한 클래식',
+          description: '격식 있는 자리, 고급스럽게',
+        },
+      ];
+
+      // ---- 데이터: 지역 ----
+      const CITIES = [
+        {
+          id: 'seoul',
+          name: '서울',
+          subUnitLabel: '동',
+          districts: [
+            '강남구',
+            '강동구',
+            '강북구',
+            '강서구',
+            '관악구',
+            '광진구',
+            '구로구',
+            '금천구',
+            '노원구',
+            '도봉구',
+            '동대문구',
+            '동작구',
+            '마포구',
+            '서대문구',
+            '서초구',
+            '성동구',
+            '성북구',
+            '송파구',
+            '양천구',
+            '영등포구',
+            '용산구',
+            '은평구',
+            '종로구',
+            '중구',
+            '중랑구',
+          ],
+          subRegions: [
+            // 강남구
+            { id: 'seoul-gangnam-yeoksam', name: '역삼동', district: '강남구', latitude: 37.5007, longitude: 127.0365 },
+            { id: 'seoul-gangnam-samsung', name: '삼성동', district: '강남구', latitude: 37.514, longitude: 127.0565 },
+            { id: 'seoul-gangnam-daechi', name: '대치동', district: '강남구', latitude: 37.4995, longitude: 127.0631 },
+            { id: 'seoul-gangnam-apgujeong', name: '압구정동', district: '강남구', latitude: 37.5271, longitude: 127.0285 },
+            { id: 'seoul-gangnam-cheongdam', name: '청담동', district: '강남구', latitude: 37.5247, longitude: 127.0472 },
+            { id: 'seoul-gangnam-sinsa', name: '신사동', district: '강남구', latitude: 37.5219, longitude: 127.0226 },
+            { id: 'seoul-gangnam-nonhyeon', name: '논현동', district: '강남구', latitude: 37.5112, longitude: 127.0286 },
+            { id: 'seoul-gangnam-dogok', name: '도곡동', district: '강남구', latitude: 37.4882, longitude: 127.0462 },
+            { id: 'seoul-gangnam-gaepo', name: '개포동', district: '강남구', latitude: 37.4823, longitude: 127.0645 },
+            { id: 'seoul-gangnam-suseo', name: '수서동', district: '강남구', latitude: 37.4875, longitude: 127.1014 },
+
+            // 강동구
+            { id: 'seoul-gangdong-cheonho', name: '천호동', district: '강동구', latitude: 37.5435, longitude: 127.1257 },
+            { id: 'seoul-gangdong-gildong', name: '길동', district: '강동구', latitude: 37.5396, longitude: 127.1436 },
+            { id: 'seoul-gangdong-seongnae', name: '성내동', district: '강동구', latitude: 37.5303, longitude: 127.1277 },
+            { id: 'seoul-gangdong-myeongil', name: '명일동', district: '강동구', latitude: 37.5513, longitude: 127.1456 },
+            { id: 'seoul-gangdong-amsa', name: '암사동', district: '강동구', latitude: 37.5522, longitude: 127.131 },
+            { id: 'seoul-gangdong-godeok', name: '고덕동', district: '강동구', latitude: 37.5586, longitude: 127.1553 },
+            { id: 'seoul-gangdong-dunchon', name: '둔촌동', district: '강동구', latitude: 37.5269, longitude: 127.1394 },
+
+            // 강북구
+            { id: 'seoul-gangbuk-suyu', name: '수유동', district: '강북구', latitude: 37.6377, longitude: 127.0242 },
+            { id: 'seoul-gangbuk-mia', name: '미아동', district: '강북구', latitude: 37.6197, longitude: 127.0285 },
+            { id: 'seoul-gangbuk-beon', name: '번동', district: '강북구', latitude: 37.6309, longitude: 127.0371 },
+            { id: 'seoul-gangbuk-ui', name: '우이동', district: '강북구', latitude: 37.6634, longitude: 127.0112 },
+
+            // 강서구
+            { id: 'seoul-gangseo-hwagok', name: '화곡동', district: '강서구', latitude: 37.5425, longitude: 126.8428 },
+            { id: 'seoul-gangseo-magok', name: '마곡동', district: '강서구', latitude: 37.5665, longitude: 126.8271 },
+            { id: 'seoul-gangseo-gayang', name: '가양동', district: '강서구', latitude: 37.5649, longitude: 126.8548 },
+            { id: 'seoul-gangseo-balsan', name: '발산동', district: '강서구', latitude: 37.5542, longitude: 126.8359 },
+            { id: 'seoul-gangseo-deungchon', name: '등촌동', district: '강서구', latitude: 37.5533, longitude: 126.8588 },
+            { id: 'seoul-gangseo-banghwa', name: '방화동', district: '강서구', latitude: 37.5734, longitude: 126.8143 },
+
+            // 관악구
+            { id: 'seoul-gwanak-sillim', name: '신림동', district: '관악구', latitude: 37.4844, longitude: 126.9296 },
+            { id: 'seoul-gwanak-bongcheon', name: '봉천동', district: '관악구', latitude: 37.4822, longitude: 126.9497 },
+            { id: 'seoul-gwanak-nakseongdae', name: '낙성대동', district: '관악구', latitude: 37.4763, longitude: 126.9585 },
+            { id: 'seoul-gwanak-namhyeon', name: '남현동', district: '관악구', latitude: 37.4737, longitude: 126.9765 },
+
+            // 광진구
+            { id: 'seoul-gwangjin-jayang', name: '자양동', district: '광진구', latitude: 37.5356, longitude: 127.0715 },
+            { id: 'seoul-gwangjin-guui', name: '구의동', district: '광진구', latitude: 37.5425, longitude: 127.0888 },
+            { id: 'seoul-gwangjin-hwayang', name: '화양동', district: '광진구', latitude: 37.5446, longitude: 127.0719 },
+            { id: 'seoul-gwangjin-gunja', name: '군자동', district: '광진구', latitude: 37.5554, longitude: 127.0757 },
+            { id: 'seoul-gwangjin-gwangjang', name: '광장동', district: '광진구', latitude: 37.5478, longitude: 127.1045 },
+            { id: 'seoul-gwangjin-junggok', name: '중곡동', district: '광진구', latitude: 37.5628, longitude: 127.0847 },
+
+            // 구로구
+            { id: 'seoul-guro-guro', name: '구로동', district: '구로구', latitude: 37.4955, longitude: 126.8876 },
+            { id: 'seoul-guro-sindorim', name: '신도림동', district: '구로구', latitude: 37.5089, longitude: 126.8856 },
+            { id: 'seoul-guro-gocheok', name: '고척동', district: '구로구', latitude: 37.5015, longitude: 126.8629 },
+            { id: 'seoul-guro-gaebong', name: '개봉동', district: '구로구', latitude: 37.4926, longitude: 126.8548 },
+            { id: 'seoul-guro-oryu', name: '오류동', district: '구로구', latitude: 37.4932, longitude: 126.8421 },
+
+            // 금천구
+            { id: 'seoul-geumcheon-gasan', name: '가산동', district: '금천구', latitude: 37.4792, longitude: 126.8825 },
+            { id: 'seoul-geumcheon-doksan', name: '독산동', district: '금천구', latitude: 37.4666, longitude: 126.8965 },
+            { id: 'seoul-geumcheon-siheung', name: '시흥동', district: '금천구', latitude: 37.4508, longitude: 126.9062 },
+
+            // 노원구
+            { id: 'seoul-nowon-sanggye', name: '상계동', district: '노원구', latitude: 37.6561, longitude: 127.0672 },
+            { id: 'seoul-nowon-junggye', name: '중계동', district: '노원구', latitude: 37.6481, longitude: 127.0725 },
+            { id: 'seoul-nowon-hagye', name: '하계동', district: '노원구', latitude: 37.6386, longitude: 127.0685 },
+            { id: 'seoul-nowon-gongneung', name: '공릉동', district: '노원구', latitude: 37.6248, longitude: 127.0749 },
+            { id: 'seoul-nowon-wolgye', name: '월계동', district: '노원구', latitude: 37.6285, longitude: 127.0585 },
+
+            // 도봉구
+            { id: 'seoul-dobong-changdong', name: '창동', district: '도봉구', latitude: 37.6531, longitude: 127.0476 },
+            { id: 'seoul-dobong-ssangmun', name: '쌍문동', district: '도봉구', latitude: 37.6499, longitude: 127.0332 },
+            { id: 'seoul-dobong-banghak', name: '방학동', district: '도봉구', latitude: 37.6649, longitude: 127.0419 },
+            { id: 'seoul-dobong-dobong', name: '도봉동', district: '도봉구', latitude: 37.6844, longitude: 127.0457 },
+
+            // 동대문구
+            { id: 'seoul-ddm-cheongnyangni', name: '청량리동', district: '동대문구', latitude: 37.5865, longitude: 127.0451 },
+            { id: 'seoul-ddm-hoegi', name: '회기동', district: '동대문구', latitude: 37.5908, longitude: 127.0558 },
+            { id: 'seoul-ddm-jeonnong', name: '전농동', district: '동대문구', latitude: 37.5777, longitude: 127.0545 },
+            { id: 'seoul-ddm-jangan', name: '장안동', district: '동대문구', latitude: 37.5688, longitude: 127.0695 },
+            { id: 'seoul-ddm-yongdu', name: '용두동', district: '동대문구', latitude: 37.5747, longitude: 127.0383 },
+            { id: 'seoul-ddm-imun', name: '이문동', district: '동대문구', latitude: 37.5993, longitude: 127.0628 },
+
+            // 동작구
+            { id: 'seoul-dongjak-sadang', name: '사당동', district: '동작구', latitude: 37.4846, longitude: 126.9746 },
+            { id: 'seoul-dongjak-sangdo', name: '상도동', district: '동작구', latitude: 37.4998, longitude: 126.9469 },
+            { id: 'seoul-dongjak-noryangjin', name: '노량진동', district: '동작구', latitude: 37.5133, longitude: 126.9415 },
+            { id: 'seoul-dongjak-heukseok', name: '흑석동', district: '동작구', latitude: 37.5071, longitude: 126.9613 },
+            { id: 'seoul-dongjak-daebang', name: '대방동', district: '동작구', latitude: 37.5082, longitude: 126.9267 },
+            { id: 'seoul-dongjak-sindaebang', name: '신대방동', district: '동작구', latitude: 37.4931, longitude: 126.9177 },
+
+            // 마포구
+            { id: 'seoul-mapo-seogyo', name: '서교동', district: '마포구', latitude: 37.5546, longitude: 126.9195 },
+            { id: 'seoul-mapo-yeonnam', name: '연남동', district: '마포구', latitude: 37.564, longitude: 126.924 },
+            { id: 'seoul-mapo-hapjeong', name: '합정동', district: '마포구', latitude: 37.5495, longitude: 126.9114 },
+            { id: 'seoul-mapo-sangam', name: '상암동', district: '마포구', latitude: 37.5791, longitude: 126.8899 },
+            { id: 'seoul-mapo-gongdeok', name: '공덕동', district: '마포구', latitude: 37.5477, longitude: 126.9557 },
+            { id: 'seoul-mapo-mangwon', name: '망원동', district: '마포구', latitude: 37.5579, longitude: 126.9052 },
+            { id: 'seoul-mapo-ahyeon', name: '아현동', district: '마포구', latitude: 37.5542, longitude: 126.9564 },
+            { id: 'seoul-mapo-daeheung', name: '대흥동', district: '마포구', latitude: 37.5487, longitude: 126.9426 },
+
+            // 서대문구
+            { id: 'seoul-sdm-sinchon', name: '신촌동', district: '서대문구', latitude: 37.5585, longitude: 126.9396 },
+            { id: 'seoul-sdm-yeonhui', name: '연희동', district: '서대문구', latitude: 37.5699, longitude: 126.9328 },
+            { id: 'seoul-sdm-hongeun', name: '홍은동', district: '서대문구', latitude: 37.5906, longitude: 126.9424 },
+            { id: 'seoul-sdm-hongje', name: '홍제동', district: '서대문구', latitude: 37.5877, longitude: 126.9465 },
+            { id: 'seoul-sdm-bukgajwa', name: '북가좌동', district: '서대문구', latitude: 37.5782, longitude: 126.9128 },
+            { id: 'seoul-sdm-namgajwa', name: '남가좌동', district: '서대문구', latitude: 37.5736, longitude: 126.9218 },
+
+            // 서초구
+            { id: 'seoul-seocho-seocho', name: '서초동', district: '서초구', latitude: 37.4919, longitude: 127.0079 },
+            { id: 'seoul-seocho-banpo', name: '반포동', district: '서초구', latitude: 37.5048, longitude: 127.0049 },
+            { id: 'seoul-seocho-jamwon', name: '잠원동', district: '서초구', latitude: 37.5152, longitude: 127.0156 },
+            { id: 'seoul-seocho-bangbae', name: '방배동', district: '서초구', latitude: 37.4812, longitude: 126.9937 },
+            { id: 'seoul-seocho-yangjae', name: '양재동', district: '서초구', latitude: 37.4756, longitude: 127.0398 },
+
+            // 성동구
+            { id: 'seoul-seongdong-seongsu', name: '성수동', district: '성동구', latitude: 37.5445, longitude: 127.0558 },
+            { id: 'seoul-seongdong-wangsimni', name: '왕십리동', district: '성동구', latitude: 37.5612, longitude: 127.0371 },
+            { id: 'seoul-seongdong-geumho', name: '금호동', district: '성동구', latitude: 37.5495, longitude: 127.0199 },
+            { id: 'seoul-seongdong-oksu', name: '옥수동', district: '성동구', latitude: 37.5419, longitude: 127.0168 },
+            { id: 'seoul-seongdong-haengdang', name: '행당동', district: '성동구', latitude: 37.5582, longitude: 127.0359 },
+            { id: 'seoul-seongdong-majang', name: '마장동', district: '성동구', latitude: 37.5673, longitude: 127.0419 },
+
+            // 성북구
+            { id: 'seoul-seongbuk-gireum', name: '길음동', district: '성북구', latitude: 37.6061, longitude: 127.0247 },
+            { id: 'seoul-seongbuk-anam', name: '안암동', district: '성북구', latitude: 37.5863, longitude: 127.0285 },
+            { id: 'seoul-seongbuk-jeongneung', name: '정릉동', district: '성북구', latitude: 37.6114, longitude: 127.0079 },
+            { id: 'seoul-seongbuk-donam', name: '돈암동', district: '성북구', latitude: 37.5936, longitude: 127.0176 },
+            { id: 'seoul-seongbuk-jangwi', name: '장위동', district: '성북구', latitude: 37.6143, longitude: 127.0496 },
+            { id: 'seoul-seongbuk-seongbuk', name: '성북동', district: '성북구', latitude: 37.5931, longitude: 126.9994 },
+
+            // 송파구
+            { id: 'seoul-songpa-jamsil', name: '잠실동', district: '송파구', latitude: 37.5133, longitude: 127.0942 },
+            { id: 'seoul-songpa-sincheon', name: '신천동', district: '송파구', latitude: 37.5159, longitude: 127.1031 },
+            { id: 'seoul-songpa-garak', name: '가락동', district: '송파구', latitude: 37.4958, longitude: 127.1225 },
+            { id: 'seoul-songpa-munjeong', name: '문정동', district: '송파구', latitude: 37.4864, longitude: 127.1243 },
+            { id: 'seoul-songpa-bangi', name: '방이동', district: '송파구', latitude: 37.5122, longitude: 127.1165 },
+            { id: 'seoul-songpa-songpa', name: '송파동', district: '송파구', latitude: 37.5037, longitude: 127.1095 },
+            { id: 'seoul-songpa-wirye', name: '위례동', district: '송파구', latitude: 37.4793, longitude: 127.1436 },
+            { id: 'seoul-songpa-seokchon', name: '석촌동', district: '송파구', latitude: 37.5034, longitude: 127.1021 },
+
+            // 양천구
+            { id: 'seoul-yangcheon-mokdong', name: '목동', district: '양천구', latitude: 37.5301, longitude: 126.8744 },
+            { id: 'seoul-yangcheon-sinjeong', name: '신정동', district: '양천구', latitude: 37.5174, longitude: 126.8588 },
+            { id: 'seoul-yangcheon-sinwol', name: '신월동', district: '양천구', latitude: 37.5262, longitude: 126.8342 },
+
+            // 영등포구
+            { id: 'seoul-ydp-yeouido', name: '여의도동', district: '영등포구', latitude: 37.5219, longitude: 126.9245 },
+            { id: 'seoul-ydp-yeongdeungpo', name: '영등포동', district: '영등포구', latitude: 37.5186, longitude: 126.9065 },
+            { id: 'seoul-ydp-dangsan', name: '당산동', district: '영등포구', latitude: 37.5326, longitude: 126.9016 },
+            { id: 'seoul-ydp-mullae', name: '문래동', district: '영등포구', latitude: 37.5162, longitude: 126.8947 },
+            { id: 'seoul-ydp-singil', name: '신길동', district: '영등포구', latitude: 37.5065, longitude: 126.9154 },
+            { id: 'seoul-ydp-daerim', name: '대림동', district: '영등포구', latitude: 37.4932, longitude: 126.8998 },
+
+            // 용산구
+            { id: 'seoul-yongsan-itaewon', name: '이태원동', district: '용산구', latitude: 37.5345, longitude: 126.9946 },
+            { id: 'seoul-yongsan-hannam', name: '한남동', district: '용산구', latitude: 37.5348, longitude: 127.0074 },
+            { id: 'seoul-yongsan-ichon', name: '이촌동', district: '용산구', latitude: 37.5205, longitude: 126.9739 },
+            { id: 'seoul-yongsan-cheongpa', name: '청파동', district: '용산구', latitude: 37.5441, longitude: 126.9685 },
+            { id: 'seoul-yongsan-huam', name: '후암동', district: '용산구', latitude: 37.5492, longitude: 126.9776 },
+            { id: 'seoul-yongsan-hangangro', name: '한강로동', district: '용산구', latitude: 37.5299, longitude: 126.9679 },
+
+            // 은평구
+            { id: 'seoul-eunpyeong-bulgwang', name: '불광동', district: '은평구', latitude: 37.6137, longitude: 126.9296 },
+            { id: 'seoul-eunpyeong-daejo', name: '대조동', district: '은평구', latitude: 37.6147, longitude: 126.9233 },
+            { id: 'seoul-eunpyeong-eungam', name: '응암동', district: '은평구', latitude: 37.5944, longitude: 126.9183 },
+            { id: 'seoul-eunpyeong-jingwan', name: '진관동', district: '은평구', latitude: 37.6384, longitude: 126.9265 },
+            { id: 'seoul-eunpyeong-galhyeon', name: '갈현동', district: '은평구', latitude: 37.6213, longitude: 126.9145 },
+            { id: 'seoul-eunpyeong-nokbeon', name: '녹번동', district: '은평구', latitude: 37.6033, longitude: 126.9355 },
+
+            // 종로구
+            { id: 'seoul-jongno-gwanghwamun', name: '세종로·광화문', district: '종로구', latitude: 37.5759, longitude: 126.9768 },
+            { id: 'seoul-jongno-samcheong', name: '삼청동', district: '종로구', latitude: 37.5849, longitude: 126.9822 },
+            { id: 'seoul-jongno-insadong', name: '인사동·종로1가', district: '종로구', latitude: 37.5734, longitude: 126.9854 },
+            { id: 'seoul-jongno-hyehwa', name: '혜화동', district: '종로구', latitude: 37.5858, longitude: 127.0017 },
+            { id: 'seoul-jongno-buam', name: '부암동', district: '종로구', latitude: 37.5942, longitude: 126.9636 },
+            { id: 'seoul-jongno-pyeongchang', name: '평창동', district: '종로구', latitude: 37.6095, longitude: 126.9693 },
+            { id: 'seoul-jongno-sajik', name: '사직동', district: '종로구', latitude: 37.5761, longitude: 126.9698 },
+
+            // 중구
+            { id: 'seoul-jung-myeongdong', name: '명동', district: '중구', latitude: 37.5636, longitude: 126.9829 },
+            { id: 'seoul-jung-euljiro', name: '을지로동', district: '중구', latitude: 37.5662, longitude: 126.9912 },
+            { id: 'seoul-jung-sindang', name: '신당동', district: '중구', latitude: 37.5612, longitude: 127.0151 },
+            { id: 'seoul-jung-sogong', name: '소공동', district: '중구', latitude: 37.5644, longitude: 126.9781 },
+            { id: 'seoul-jung-hoehyeon', name: '회현동', district: '중구', latitude: 37.5567, longitude: 126.9776 },
+            { id: 'seoul-jung-jangchung', name: '장충동', district: '중구', latitude: 37.5586, longitude: 127.0059 },
+
+            // 중랑구
+            { id: 'seoul-jungnang-myeonmok', name: '면목동', district: '중랑구', latitude: 37.5886, longitude: 127.0875 },
+            { id: 'seoul-jungnang-sangbong', name: '상봉동', district: '중랑구', latitude: 37.5964, longitude: 127.0858 },
+            { id: 'seoul-jungnang-junghwa', name: '중화동', district: '중랑구', latitude: 37.6021, longitude: 127.0793 },
+            { id: 'seoul-jungnang-mangu', name: '망우동', district: '중랑구', latitude: 37.5994, longitude: 127.0997 },
+            { id: 'seoul-jungnang-sinnae', name: '신내동', district: '중랑구', latitude: 37.6085, longitude: 127.0968 },
+          ],
+        },
+        {
+          id: 'suwon',
+          name: '수원',
+          subUnitLabel: '군/구',
+          subRegions: [
+            { id: 'suwon-jangan', name: '장안구', latitude: 37.3036, longitude: 127.0103 },
+            { id: 'suwon-gwonseon', name: '권선구', latitude: 37.2576, longitude: 126.9718 },
+            { id: 'suwon-paldal', name: '팔달구', latitude: 37.2826, longitude: 127.0199 },
+            { id: 'suwon-yeongtong', name: '영통구', latitude: 37.2596, longitude: 127.0465 },
+          ],
+        },
+        {
+          id: 'incheon',
+          name: '인천',
+          subUnitLabel: '군/구',
+          subRegions: [
+            { id: 'incheon-jung', name: '중구', latitude: 37.4737, longitude: 126.6217 },
+            { id: 'incheon-dong', name: '동구', latitude: 37.4739, longitude: 126.6431 },
+            { id: 'incheon-michuhol', name: '미추홀구', latitude: 37.4636, longitude: 126.6505 },
+            { id: 'incheon-yeonsu', name: '연수구', latitude: 37.4102, longitude: 126.6783 },
+            { id: 'incheon-namdong', name: '남동구', latitude: 37.4472, longitude: 126.7315 },
+            { id: 'incheon-bupyeong', name: '부평구', latitude: 37.5074, longitude: 126.7219 },
+            { id: 'incheon-gyeyang', name: '계양구', latitude: 37.5374, longitude: 126.7378 },
+            { id: 'incheon-seo', name: '서구', latitude: 37.5454, longitude: 126.676 },
+            { id: 'incheon-ganghwa', name: '강화군', latitude: 37.7465, longitude: 126.4879 },
+            { id: 'incheon-ongjin', name: '옹진군', latitude: 37.4466, longitude: 126.6365 },
+          ],
+        },
+        {
+          id: 'daejeon',
+          name: '대전',
+          subUnitLabel: '군/구',
+          subRegions: [
+            { id: 'daejeon-dong', name: '동구', latitude: 36.312, longitude: 127.4549 },
+            { id: 'daejeon-jung', name: '중구', latitude: 36.3257, longitude: 127.4214 },
+            { id: 'daejeon-seo', name: '서구', latitude: 36.3555, longitude: 127.3838 },
+            { id: 'daejeon-yuseong', name: '유성구', latitude: 36.3622, longitude: 127.3563 },
+            { id: 'daejeon-daedeok', name: '대덕구', latitude: 36.3465, longitude: 127.4158 },
+          ],
+        },
+        {
+          id: 'daegu',
+          name: '대구',
+          subUnitLabel: '군/구',
+          subRegions: [
+            { id: 'daegu-jung', name: '중구', latitude: 35.8693, longitude: 128.6062 },
+            { id: 'daegu-dong', name: '동구', latitude: 35.8866, longitude: 128.6356 },
+            { id: 'daegu-seo', name: '서구', latitude: 35.8719, longitude: 128.5592 },
+            { id: 'daegu-nam', name: '남구', latitude: 35.846, longitude: 128.5977 },
+            { id: 'daegu-buk', name: '북구', latitude: 35.8858, longitude: 128.5829 },
+            { id: 'daegu-suseong', name: '수성구', latitude: 35.8582, longitude: 128.6306 },
+            { id: 'daegu-dalseo', name: '달서구', latitude: 35.8299, longitude: 128.5327 },
+            { id: 'daegu-dalseong', name: '달성군', latitude: 35.7747, longitude: 128.4314 },
+            { id: 'daegu-gunwi', name: '군위군', latitude: 36.2428, longitude: 128.5728 },
+          ],
+        },
+        {
+          id: 'gwangju',
+          name: '광주',
+          subUnitLabel: '군/구',
+          subRegions: [
+            { id: 'gwangju-dong', name: '동구', latitude: 35.1462, longitude: 126.9231 },
+            { id: 'gwangju-seo', name: '서구', latitude: 35.152, longitude: 126.8899 },
+            { id: 'gwangju-nam', name: '남구', latitude: 35.1329, longitude: 126.9024 },
+            { id: 'gwangju-buk', name: '북구', latitude: 35.1742, longitude: 126.912 },
+            { id: 'gwangju-gwangsan', name: '광산구', latitude: 35.1395, longitude: 126.7936 },
+          ],
+        },
+        {
+          id: 'busan',
+          name: '부산',
+          subUnitLabel: '군/구',
+          subRegions: [
+            { id: 'busan-jung', name: '중구', latitude: 35.1066, longitude: 129.0323 },
+            { id: 'busan-seo', name: '서구', latitude: 35.0979, longitude: 129.0242 },
+            { id: 'busan-dong', name: '동구', latitude: 35.1293, longitude: 129.0455 },
+            { id: 'busan-yeongdo', name: '영도구', latitude: 35.0912, longitude: 129.0679 },
+            { id: 'busan-busanjin', name: '부산진구', latitude: 35.1631, longitude: 129.0532 },
+            { id: 'busan-dongnae', name: '동래구', latitude: 35.2049, longitude: 129.0837 },
+            { id: 'busan-nam', name: '남구', latitude: 35.1366, longitude: 129.0844 },
+            { id: 'busan-buk', name: '북구', latitude: 35.1972, longitude: 128.9903 },
+            { id: 'busan-haeundae', name: '해운대구', latitude: 35.1631, longitude: 129.1636 },
+            { id: 'busan-saha', name: '사하구', latitude: 35.1045, longitude: 128.9748 },
+            { id: 'busan-geumjeong', name: '금정구', latitude: 35.2429, longitude: 129.0921 },
+            { id: 'busan-gangseo', name: '강서구', latitude: 35.2122, longitude: 128.9806 },
+            { id: 'busan-yeonje', name: '연제구', latitude: 35.1763, longitude: 129.0798 },
+            { id: 'busan-suyeong', name: '수영구', latitude: 35.1456, longitude: 129.1131 },
+            { id: 'busan-sasang', name: '사상구', latitude: 35.1526, longitude: 128.9912 },
+            { id: 'busan-gijang', name: '기장군', latitude: 35.2446, longitude: 129.2223 },
+          ],
+        },
+        {
+          id: 'jeju',
+          name: '제주',
+          subUnitLabel: '군/구',
+          subRegions: [
+            { id: 'jeju-city', name: '제주시', latitude: 33.4996, longitude: 126.5312 },
+            { id: 'jeju-seogwipo', name: '서귀포시', latitude: 33.2541, longitude: 126.5601 },
+            { id: 'jeju-aewol', name: '애월읍 (제주시)', latitude: 33.4628, longitude: 126.3292 },
+            { id: 'jeju-hallim', name: '한림읍 (제주시)', latitude: 33.4136, longitude: 126.2692 },
+            { id: 'jeju-jocheon', name: '조천읍 (제주시)', latitude: 33.5356, longitude: 126.6347 },
+            { id: 'jeju-gujwa', name: '구좌읍 (제주시)', latitude: 33.5236, longitude: 126.8519 },
+            { id: 'jeju-seongsan', name: '성산읍 (서귀포시)', latitude: 33.4414, longitude: 126.9125 },
+            { id: 'jeju-pyoseon', name: '표선면 (서귀포시)', latitude: 33.3264, longitude: 126.8317 },
+            { id: 'jeju-andeok', name: '안덕면 (서귀포시)', latitude: 33.2564, longitude: 126.3311 },
+            { id: 'jeju-daejeong', name: '대정읍 (서귀포시)', latitude: 33.2264, longitude: 126.2528 },
+          ],
+        },
+      ];
+
+      // ---- Open-Meteo 날씨 조회 ----
+      function mapWeatherCodeToKorean(code) {
+        if (code === 0) return { label: '맑음', emoji: '☀️' };
+        if (code === 1) return { label: '대체로 맑음', emoji: '🌤️' };
+        if (code === 2) return { label: '구름 조금', emoji: '⛅' };
+        if (code === 3) return { label: '흐림', emoji: '☁️' };
+        if (code === 45 || code === 48) return { label: '안개', emoji: '🌫️' };
+        if (code === 51 || code === 53 || code === 55) return { label: '이슬비', emoji: '🌦️' };
+        if (code === 56 || code === 57) return { label: '진눈깨비', emoji: '🌧️' };
+        if (code === 61 || code === 63 || code === 65) return { label: '비', emoji: '🌧️' };
+        if (code === 66 || code === 67) return { label: '진눈깨비', emoji: '🌨️' };
+        if (code === 71 || code === 73 || code === 75 || code === 77) return { label: '눈', emoji: '❄️' };
+        if (code === 80 || code === 81 || code === 82) return { label: '소나기', emoji: '🌦️' };
+        if (code === 85 || code === 86) return { label: '눈', emoji: '🌨️' };
+        if (code === 95 || code === 96 || code === 99) return { label: '천둥번개', emoji: '⛈️' };
+        return { label: '구름', emoji: '⛅' };
+      }
+
+      async function fetchOpenMeteoWeather(latitude, longitude, signal) {
+        const params = new URLSearchParams({
+          latitude: latitude.toFixed(4),
+          longitude: longitude.toFixed(4),
+          current: 'temperature_2m,apparent_temperature,weather_code',
+          hourly: 'precipitation_probability',
+          daily: 'temperature_2m_max,temperature_2m_min,precipitation_probability_max',
+          timezone: 'Asia/Seoul',
+          forecast_days: '1',
+        });
+
+        const response = await fetch(
+          `https://api.open-meteo.com/v1/forecast?${params.toString()}`,
+          { signal }
+        );
+
+        if (!response.ok) {
+          throw new Error('날씨 정보를 불러오지 못했습니다.');
+        }
+
+        const data = await response.json();
+        const currentTemp = data.current?.temperature_2m;
+        const apparentTemp = data.current?.apparent_temperature;
+        const weatherCode = data.current?.weather_code ?? 0;
+        const maxTemp = data.daily?.temperature_2m_max?.[0];
+        const minTemp = data.daily?.temperature_2m_min?.[0];
+
+        if (
+          typeof currentTemp !== 'number' ||
+          typeof apparentTemp !== 'number' ||
+          typeof maxTemp !== 'number' ||
+          typeof minTemp !== 'number'
+        ) {
+          throw new Error('날씨 데이터 형식이 올바르지 않습니다.');
+        }
+
+        const currentHour = new Date().getHours();
+        const hourlyProb = data.hourly?.precipitation_probability?.[currentHour];
+        const dailyMaxProb = data.daily?.precipitation_probability_max?.[0];
+        const precipitationProbability =
+          typeof hourlyProb === 'number'
+            ? hourlyProb
+            : typeof dailyMaxProb === 'number'
+              ? dailyMaxProb
+              : 0;
+
+        const { label, emoji } = mapWeatherCodeToKorean(weatherCode);
+
+        return {
+          temperature: Math.round(currentTemp),
+          apparentTemperature: Math.round(apparentTemp),
+          weatherCode,
+          weatherLabel: label,
+          weatherEmoji: emoji,
+          minTemp: Math.round(minTemp),
+          maxTemp: Math.round(maxTemp),
+          precipitationProbability: Math.round(precipitationProbability),
+        };
+      }
+
+      // ---- 아이콘 컴포넌트 (Lucide SVG 인라인) ----
+      function AlertCircleIcon({ className }) {
+        return (
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className} aria-hidden="true">
+            <circle cx="12" cy="12" r="10" />
+            <line x1="12" y1="8" x2="12" y2="12" />
+            <line x1="12" y1="16" x2="12.01" y2="16" />
+          </svg>
+        );
+      }
+
+      function ArrowRightIcon({ className }) {
+        return (
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className} aria-hidden="true">
+            <path d="M5 12h14" />
+            <path d="m12 5 7 7-7 7" />
+          </svg>
+        );
+      }
+
+      function ArrowLeftIcon({ className }) {
+        return (
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className} aria-hidden="true">
+            <path d="m12 19-7-7 7-7" />
+            <path d="M19 12H5" />
+          </svg>
+        );
+      }
+
+      function Loader2Icon({ className }) {
+        return (
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className} aria-hidden="true">
+            <path d="M21 12a9 9 0 1 1-6.219-8.56" />
+          </svg>
+        );
+      }
+
+      function MapPinIcon({ className }) {
+        return (
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className} aria-hidden="true">
+            <path d="M20 10c0 4.993-5.539 10.193-7.399 11.799a1 1 0 0 1-1.202 0C9.539 20.193 4 14.993 4 10a8 8 0 0 1 16 0" />
+            <circle cx="12" cy="10" r="3" />
+          </svg>
+        );
+      }
+
+      function NavigationIcon({ className }) {
+        return (
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className} aria-hidden="true">
+            <polygon points="3 11 22 2 13 21 11 13 3 11" />
+          </svg>
+        );
+      }
+
+      function RefreshCwIcon({ className }) {
+        return (
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className} aria-hidden="true">
+            <path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8" />
+            <path d="M21 3v5h-5" />
+            <path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16" />
+            <path d="M8 16H3v5" />
+          </svg>
+        );
+      }
+
+      function SearchIcon({ className }) {
+        return (
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className} aria-hidden="true">
+            <circle cx="11" cy="11" r="8" />
+            <path d="m21 21-4.3-4.3" />
+          </svg>
+        );
+      }
+
+      // ---- 스타일 일러스트 SVG ----
+      function StyleIllustration({ styleId, selected = false }) {
+        const bgClass = selected ? 'bg-blue-100/70' : 'bg-stone-100';
+
+        if (styleId === 'casual') {
+          return (
+            <div
+              className={`flex h-20 w-20 shrink-0 items-center justify-center rounded-2xl transition-colors ${bgClass}`}
+              aria-hidden="true"
+            >
+              <svg viewBox="0 0 64 64" className="h-14 w-14" fill="none">
+                <path
+                  d="M20 16L11 23L15 32L20 29V48H44V29L49 32L53 23L44 16L38 19C35.5 20.5 28.5 20.5 26 19L20 16Z"
+                  fill="#6B9080"
+                  stroke="#2D4739"
+                  strokeWidth="2.2"
+                  strokeLinejoin="round"
+                />
+                <path
+                  d="M26 19C28.5 22 35.5 22 38 19"
+                  stroke="#EAF4F4"
+                  strokeWidth="2.2"
+                  strokeLinecap="round"
+                />
+                <rect x="22" y="43" width="20" height="4" rx="1.5" fill="#4F7061" />
+                <path
+                  d="M21 51H43L45 57H35L32 54L29 57H19L21 51Z"
+                  fill="#4A6FA5"
+                  stroke="#1E3A5F"
+                  strokeWidth="2"
+                  strokeLinejoin="round"
+                />
+              </svg>
+            </div>
+          );
+        }
+
+        if (styleId === 'neat') {
+          return (
+            <div
+              className={`flex h-20 w-20 shrink-0 items-center justify-center rounded-2xl transition-colors ${bgClass}`}
+              aria-hidden="true"
+            >
+              <svg viewBox="0 0 64 64" className="h-14 w-14" fill="none">
+                <path
+                  d="M20 14L11 22L15 33L20 30V51H44V30L49 33L53 22L44 14L37 16L32 25L27 16L20 14Z"
+                  fill="#3B5B8C"
+                  stroke="#1E3250"
+                  strokeWidth="2.2"
+                  strokeLinejoin="round"
+                />
+                <path
+                  d="M27 16L32 25L37 16"
+                  fill="#FFFFFF"
+                  stroke="#1E3250"
+                  strokeWidth="2"
+                  strokeLinejoin="round"
+                />
+                <path
+                  d="M26 14L32 21L38 14"
+                  stroke="#1E3250"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+                <line x1="32" y1="25" x2="32" y2="51" stroke="#1E3250" strokeWidth="2" />
+                <circle cx="35.5" cy="33" r="1.4" fill="#E2E8F0" />
+                <circle cx="35.5" cy="40" r="1.4" fill="#E2E8F0" />
+                <circle cx="35.5" cy="47" r="1.4" fill="#E2E8F0" />
+              </svg>
+            </div>
+          );
+        }
+
+        if (styleId === 'active') {
+          return (
+            <div
+              className={`flex h-20 w-20 shrink-0 items-center justify-center rounded-2xl transition-colors ${bgClass}`}
+              aria-hidden="true"
+            >
+              <svg viewBox="0 0 64 64" className="h-14 w-14" fill="none">
+                <path
+                  d="M21 15L11 23L15 33L21 29V49H43V29L49 33L53 23L43 15L37 13H27L21 15Z"
+                  fill="#E07A5F"
+                  stroke="#7A3222"
+                  strokeWidth="2.2"
+                  strokeLinejoin="round"
+                />
+                <path
+                  d="M25 13H39V18H25V13Z"
+                  fill="#F2CC8F"
+                  stroke="#7A3222"
+                  strokeWidth="2"
+                  strokeLinejoin="round"
+                />
+                <line x1="32" y1="18" x2="32" y2="49" stroke="#7A3222" strokeWidth="2.2" />
+                <path
+                  d="M21 31H28M36 31H43"
+                  stroke="#F4F1DE"
+                  strokeWidth="2.4"
+                  strokeLinecap="round"
+                />
+                <path
+                  d="M20 53H44L47 57H17L20 53Z"
+                  fill="#3D405B"
+                  stroke="#24263B"
+                  strokeWidth="2"
+                  strokeLinejoin="round"
+                />
+              </svg>
+            </div>
+          );
+        }
+
+        return (
+          <div
+            className={`flex h-20 w-20 shrink-0 items-center justify-center rounded-2xl transition-colors ${bgClass}`}
+            aria-hidden="true"
+          >
+            <svg viewBox="0 0 64 64" className="h-14 w-14" fill="none">
+              <path
+                d="M21 15L12 23L15 35L20 32L18 54H46L44 32L49 35L52 23L43 15L36 17L32 23L28 17L21 15Z"
+                fill="#C9AE8B"
+                stroke="#5C4730"
+                strokeWidth="2.2"
+                strokeLinejoin="round"
+              />
+              <path
+                d="M25 15L32 25L39 15"
+                fill="#8C3B3B"
+                stroke="#4F1E1E"
+                strokeWidth="2"
+                strokeLinejoin="round"
+              />
+              <path
+                d="M29 22V33"
+                stroke="#8C3B3B"
+                strokeWidth="4.5"
+                strokeLinecap="round"
+              />
+              <rect
+                x="19.5"
+                y="35"
+                width="25"
+                height="3.5"
+                rx="1.5"
+                fill="#9E8260"
+                stroke="#5C4730"
+                strokeWidth="1.6"
+              />
+              <circle cx="28" cy="44" r="1.4" fill="#5C4730" />
+              <circle cx="36" cy="44" r="1.4" fill="#5C4730" />
+              <circle cx="28" cy="49" r="1.4" fill="#5C4730" />
+              <circle cx="36" cy="49" r="1.4" fill="#5C4730" />
+            </svg>
+          </div>
+        );
+      }
+
+      // ---- 1단계: 나에 대해 ----
+      function getMissingPrompt(profile) {
+        if (!profile.ageGroup) return '연령대를 골라 주세요';
+        if (!profile.gender) return '성별을 골라 주세요';
+        if (!profile.style) return '선호하는 옷 스타일을 골라 주세요';
+        return null;
+      }
+
+      function AboutMeStep({
+        profile,
+        onChangeAgeGroup,
+        onChangeGender,
+        onChangeStyle,
+        onNext,
+      }) {
+        const missingPrompt = getMissingPrompt(profile);
+        const isComplete = missingPrompt === null;
+
+        return (
+          <div className="space-y-8">
+            <div className="space-y-2">
+              <p className="text-sm font-semibold text-blue-800">1단계 · 나에 대해</p>
+              <h1 className="text-2xl font-extrabold tracking-tight text-zinc-900 sm:text-3xl text-balance">
+                나에게 꼭 맞는 옷차림을 위해 알려 주세요
+              </h1>
+              <p className="text-base text-zinc-600 sm:text-lg">
+                연령대, 성별, 선호하는 옷 스타일을 하나씩 선택해 주세요.
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 gap-8 lg:grid-cols-12 lg:items-start">
+              {/* 왼쪽 영역: 연령대 + 성별 */}
+              <div className="space-y-8 lg:col-span-5">
+                {/* 연령대 */}
+                <section
+                  aria-labelledby="age-group-heading"
+                  className="rounded-3xl border border-zinc-200 bg-white p-5 sm:p-6"
+                >
+                  <div className="mb-4 flex items-baseline justify-between gap-2">
+                    <h2
+                      id="age-group-heading"
+                      className="text-xl font-bold text-zinc-900"
+                    >
+                      연령대
+                    </h2>
+                    <span className="text-sm font-medium text-zinc-500">
+                      1개 선택
+                    </span>
+                  </div>
+
+                  <div
+                    role="radiogroup"
+                    aria-labelledby="age-group-heading"
+                    className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-2"
+                  >
+                    {AGE_GROUPS.map((age) => {
+                      const isSelected = profile.ageGroup === age;
+                      return (
+                        <button
+                          key={age}
+                          type="button"
+                          role="radio"
+                          aria-checked={isSelected}
+                          onClick={() => onChangeAgeGroup(age)}
+                          className={`min-h-[56px] rounded-2xl px-4 py-3 text-lg font-bold transition-all focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-800 active:scale-[0.98] ${
+                            isSelected
+                              ? 'border-[3px] border-blue-800 bg-blue-50 text-blue-950 shadow-sm'
+                              : 'border border-zinc-200 bg-stone-50 text-zinc-800 hover:border-zinc-400 hover:bg-white'
+                          }`}
+                        >
+                          {age}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </section>
+
+                {/* 성별 */}
+                <section
+                  aria-labelledby="gender-heading"
+                  className="rounded-3xl border border-zinc-200 bg-white p-5 sm:p-6"
+                >
+                  <div className="mb-4 flex items-baseline justify-between gap-2">
+                    <h2
+                      id="gender-heading"
+                      className="text-xl font-bold text-zinc-900"
+                    >
+                      성별
+                    </h2>
+                    <span className="text-sm font-medium text-zinc-500">
+                      1개 선택
+                    </span>
+                  </div>
+
+                  <div
+                    role="radiogroup"
+                    aria-labelledby="gender-heading"
+                    className="grid grid-cols-1 gap-3 sm:grid-cols-3 lg:grid-cols-1 xl:grid-cols-3"
+                  >
+                    {GENDERS.map((gender) => {
+                      const isSelected = profile.gender === gender;
+                      return (
+                        <button
+                          key={gender}
+                          type="button"
+                          role="radio"
+                          aria-checked={isSelected}
+                          onClick={() => onChangeGender(gender)}
+                          className={`min-h-[56px] rounded-2xl px-4 py-3 text-lg font-bold whitespace-nowrap transition-all focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-800 active:scale-[0.98] ${
+                            isSelected
+                              ? 'border-[3px] border-blue-800 bg-blue-50 text-blue-950 shadow-sm'
+                              : 'border border-zinc-200 bg-stone-50 text-zinc-800 hover:border-zinc-400 hover:bg-white'
+                          }`}
+                        >
+                          {gender}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </section>
+              </div>
+
+              {/* 오른쪽 영역: 선호하는 옷 스타일 4가지 카드 */}
+              <section
+                aria-labelledby="style-heading"
+                className="rounded-3xl border border-zinc-200 bg-white p-5 sm:p-6 lg:col-span-7"
+              >
+                <div className="mb-4 flex items-baseline justify-between gap-2">
+                  <h2
+                    id="style-heading"
+                    className="text-xl font-bold text-zinc-900"
+                  >
+                    선호하는 옷 스타일
+                  </h2>
+                  <span className="text-sm font-medium text-zinc-500">
+                    하나만 선택
+                  </span>
+                </div>
+
+                <div
+                  role="radiogroup"
+                  aria-labelledby="style-heading"
+                  className="grid grid-cols-1 gap-3.5 sm:grid-cols-2 lg:grid-cols-1 xl:grid-cols-2"
+                >
+                  {OUTFIT_STYLES.map((style) => {
+                    const isSelected = profile.style === style.id;
+                    return (
+                      <label
+                        key={style.id}
+                        htmlFor={`style-${style.id}`}
+                        className={`flex cursor-pointer items-center gap-4 rounded-2xl p-4 transition-all focus-within:outline focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-blue-800 active:scale-[0.99] ${
+                          isSelected
+                            ? 'border-[3px] border-blue-800 bg-blue-50/70 shadow-sm'
+                            : 'border border-zinc-200 bg-stone-50/70 hover:border-zinc-400 hover:bg-white'
+                        }`}
+                      >
+                        <StyleIllustration
+                          styleId={style.id}
+                          selected={isSelected}
+                        />
+
+                        <div className="min-w-0 flex-1 space-y-1">
+                          <div className="text-lg font-bold text-zinc-900">
+                            {style.name}
+                          </div>
+                          <p className="text-[15px] leading-snug text-zinc-600">
+                            {style.description}
+                          </p>
+                        </div>
+
+                        <div className="flex min-h-[44px] min-w-[44px] shrink-0 items-center justify-center">
+                          <input
+                            id={`style-${style.id}`}
+                            type="radio"
+                            name="outfit-style"
+                            value={style.id}
+                            checked={isSelected}
+                            onChange={() => onChangeStyle(style.id)}
+                            className="h-6 w-6 cursor-pointer accent-blue-800"
+                          />
+                        </div>
+                      </label>
+                    );
+                  })}
+                </div>
+              </section>
+            </div>
+
+            {/* 하단 안내 문구 및 다음 버튼 */}
+            <div className="space-y-3 border-t border-zinc-200 pt-6">
+              {missingPrompt && (
+                <div
+                  role="status"
+                  aria-live="polite"
+                  className="flex items-center justify-center gap-2 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-base font-semibold text-amber-900"
+                >
+                  <AlertCircleIcon className="h-5 w-5 shrink-0 text-amber-700" />
+                  <span>{missingPrompt}</span>
+                </div>
+              )}
+
+              <button
+                type="button"
+                disabled={!isComplete}
+                onClick={onNext}
+                className={`flex min-h-[60px] w-full items-center justify-center gap-2 rounded-2xl px-6 py-4 text-xl font-bold transition-all focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-800 ${
+                  isComplete
+                    ? 'cursor-pointer bg-blue-900 text-white shadow-md hover:bg-blue-800 active:scale-[0.99]'
+                    : 'cursor-not-allowed bg-zinc-200 text-zinc-500'
+                }`}
+              >
+                <span>다음</span>
+                <ArrowRightIcon className="h-6 w-6 shrink-0" />
+              </button>
+            </div>
+          </div>
+        );
+      }
+
+      // ---- 2단계: 오늘 날씨 ----
+      function WeatherStep({ onBack }) {
+        const [selectedCity, setSelectedCity] = useState(null);
+        const [selectedSeoulDistrict, setSelectedSeoulDistrict] = useState('강남구');
+        const [seoulSearch, setSeoulSearch] = useState('');
+        const [selectedSubRegionId, setSelectedSubRegionId] = useState(null);
+        const [selectedLocation, setSelectedLocation] = useState(null);
+
+        const [gpsStatus, setGpsStatus] = useState('checking');
+        const [weatherStatus, setWeatherStatus] = useState('idle');
+        const [weather, setWeather] = useState(null);
+        const [weatherError, setWeatherError] = useState(null);
+        const [recommendNotice, setRecommendNotice] = useState(null);
+
+        const manualPickedRef = useRef(false);
+        const abortControllerRef = useRef(null);
+
+        const loadWeatherForCoords = useCallback(async (latitude, longitude) => {
+          if (abortControllerRef.current) {
+            abortControllerRef.current.abort();
+          }
+          const controller = new AbortController();
+          abortControllerRef.current = controller;
+
+          setWeatherStatus('loading');
+          setWeatherError(null);
+
+          try {
+            const result = await fetchOpenMeteoWeather(
+              latitude,
+              longitude,
+              controller.signal
+            );
+            if (!controller.signal.aborted) {
+              setWeather(result);
+              setWeatherStatus('success');
+            }
+          } catch (err) {
+            if (err && err.name === 'AbortError') {
+              return;
+            }
+            setWeatherError('날씨 정보를 가져오지 못했어요. 다시 시도해 주세요.');
+            setWeatherStatus('error');
+          }
+        }, []);
+
+        const requestCurrentPosition = useCallback(
+          (isRetry = false) => {
+            if (isRetry) {
+              manualPickedRef.current = false;
+            }
+
+            if (typeof navigator === 'undefined' || !navigator.geolocation) {
+              setGpsStatus('failed');
+              return;
+            }
+
+            setGpsStatus('checking');
+
+            navigator.geolocation.getCurrentPosition(
+              (position) => {
+                if (manualPickedRef.current && !isRetry) {
+                  return;
+                }
+                const { latitude, longitude } = position.coords;
+                setGpsStatus('success');
+                setSelectedCity(null);
+                setSelectedSubRegionId(null);
+                setSelectedLocation({
+                  label: '현재 내 위치',
+                  latitude,
+                  longitude,
+                  source: 'gps',
+                });
+                loadWeatherForCoords(latitude, longitude);
+              },
+              () => {
+                if (manualPickedRef.current && !isRetry) {
+                  return;
+                }
+                setGpsStatus('failed');
+              },
+              {
+                enableHighAccuracy: false,
+                timeout: 5000,
+                maximumAge: 0,
+              }
+            );
+          },
+          [loadWeatherForCoords]
+        );
+
+        useEffect(() => {
+          requestCurrentPosition(false);
+          return () => {
+            if (abortControllerRef.current) {
+              abortControllerRef.current.abort();
+            }
+          };
+        }, [requestCurrentPosition]);
+
+        const handleSelectCity = (city) => {
+          manualPickedRef.current = true;
+          setSelectedCity(city);
+          setSelectedSubRegionId(null);
+          setSeoulSearch('');
+          setRecommendNotice(null);
+          if (city.id === 'seoul' && city.districts && city.districts.length > 0) {
+            setSelectedSeoulDistrict(city.districts[0]);
+          }
+        };
+
+        const handleSelectSubRegion = (city, subRegion) => {
+          manualPickedRef.current = true;
+          setSelectedSubRegionId(subRegion.id);
+          setRecommendNotice(null);
+
+          const fullLabel = subRegion.district
+            ? `${city.name} ${subRegion.district} ${subRegion.name}`
+            : `${city.name} ${subRegion.name}`;
+
+          setSelectedLocation({
+            label: fullLabel,
+            latitude: subRegion.latitude,
+            longitude: subRegion.longitude,
+            source: 'manual',
+          });
+
+          loadWeatherForCoords(subRegion.latitude, subRegion.longitude);
+        };
+
+        const visibleSubRegions = useMemo(() => {
+          if (!selectedCity) return [];
+          if (selectedCity.id !== 'seoul') {
+            return selectedCity.subRegions;
+          }
+
+          const keyword = seoulSearch.trim();
+          if (keyword.length > 0) {
+            return selectedCity.subRegions.filter(
+              (item) =>
+                item.name.includes(keyword) ||
+                (item.district && item.district.includes(keyword))
+            );
+          }
+
+          return selectedCity.subRegions.filter(
+            (item) => item.district === selectedSeoulDistrict
+          );
+        }, [selectedCity, selectedSeoulDistrict, seoulSearch]);
+
+        const handleRecommendClick = () => {
+          if (!selectedLocation || weatherStatus !== 'success') {
+            setRecommendNotice('먼저 지역을 골라 오늘 날씨를 확인해 주세요.');
+            return;
+          }
+          setRecommendNotice('옷차림 추천 기능은 다음 단계에서 준비될 예정이에요.');
+        };
+
+        return (
+          <div className="space-y-8">
+            <div className="space-y-2">
+              <p className="text-sm font-semibold text-blue-800">2단계 · 오늘 날씨</p>
+              <h1 className="text-2xl font-extrabold tracking-tight text-zinc-900 sm:text-3xl text-balance">
+                오늘 어느 지역의 날씨를 확인할까요?
+              </h1>
+            </div>
+
+            {gpsStatus === 'failed' && !selectedLocation && (
+              <div
+                role="status"
+                aria-live="polite"
+                className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-amber-200 bg-amber-50 px-5 py-4"
+              >
+                <div className="flex items-center gap-3">
+                  <MapPinIcon className="h-6 w-6 shrink-0 text-amber-800" />
+                  <p className="text-lg font-bold text-amber-950">
+                    위치를 찾지 못했어요. 지역을 골라 주세요
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => requestCurrentPosition(true)}
+                  className="inline-flex min-h-[44px] cursor-pointer items-center gap-1.5 rounded-xl border border-amber-300 bg-white px-4 py-2 text-sm font-bold text-amber-900 transition-colors hover:bg-amber-100 whitespace-nowrap shrink-0"
+                >
+                  <NavigationIcon className="h-4 w-4" />
+                  <span>다시 위치 찾기</span>
+                </button>
+              </div>
+            )}
+
+            {gpsStatus === 'checking' && !selectedLocation && (
+              <div
+                role="status"
+                aria-live="polite"
+                className="flex items-center gap-3 rounded-2xl border border-zinc-200 bg-white px-5 py-4 text-base font-semibold text-zinc-700"
+              >
+                <Loader2Icon className="h-5 w-5 shrink-0 animate-spin text-blue-800" />
+                <span>
+                  현재 위치를 확인하고 있어요… 아래에서 바로 지역을 고를 수도 있어요.
+                </span>
+              </div>
+            )}
+
+            <div className="grid grid-cols-1 gap-8 lg:grid-cols-12 lg:items-start">
+              {/* 왼쪽 영역: 지역 선택 */}
+              <section
+                aria-labelledby="region-heading"
+                className="space-y-6 rounded-3xl border border-zinc-200 bg-white p-5 sm:p-6 lg:col-span-7"
+              >
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <h2
+                    id="region-heading"
+                    className="text-xl font-bold text-zinc-900"
+                  >
+                    지역을 골라 주세요
+                  </h2>
+                  {gpsStatus !== 'checking' && (
+                    <button
+                      type="button"
+                      onClick={() => requestCurrentPosition(true)}
+                      className="inline-flex min-h-[44px] cursor-pointer items-center gap-1.5 rounded-xl border border-zinc-200 bg-stone-50 px-3.5 py-2 text-sm font-semibold text-zinc-700 transition-colors hover:border-zinc-400 hover:bg-white whitespace-nowrap shrink-0"
+                    >
+                      <NavigationIcon className="h-4 w-4 text-blue-800" />
+                      <span>현재 위치로 찾기</span>
+                    </button>
+                  )}
+                </div>
+
+                {/* 8개 시/도 버튼 */}
+                <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+                  {CITIES.map((city) => {
+                    const isSelected = selectedCity?.id === city.id;
+                    return (
+                      <button
+                        key={city.id}
+                        type="button"
+                        aria-pressed={isSelected}
+                        onClick={() => handleSelectCity(city)}
+                        className={`min-h-[54px] rounded-2xl px-4 py-3 text-lg font-bold transition-all focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-800 active:scale-[0.98] ${
+                          isSelected
+                            ? 'border-[3px] border-blue-800 bg-blue-50 text-blue-950 shadow-sm'
+                            : 'border border-zinc-200 bg-stone-50 text-zinc-800 hover:border-zinc-400 hover:bg-white'
+                        }`}
+                      >
+                        {city.name}
+                      </button>
+                    );
+                  })}
+                </div>
+
+                {/* 세부 지역 (서울: 동 단위 / 그 외: 군·구 단위) */}
+                {selectedCity && (
+                  <div className="space-y-4 border-t border-zinc-200 pt-5">
+                    <div className="flex flex-wrap items-baseline justify-between gap-2">
+                      <h3 className="text-lg font-bold text-zinc-900">
+                        {selectedCity.name} ·{' '}
+                        {selectedCity.subUnitLabel === '동'
+                          ? '동 단위 선택'
+                          : '군·구 단위 선택'}
+                      </h3>
+                      <span className="text-sm text-zinc-500">
+                        원하는 지역을 누르면 바로 날씨를 확인해요
+                      </span>
+                    </div>
+
+                    {selectedCity.id === 'seoul' && selectedCity.districts && (
+                      <div className="space-y-4">
+                        <div className="relative">
+                          <SearchIcon className="pointer-events-none absolute top-1/2 left-4 h-5 w-5 -translate-y-1/2 text-zinc-400" />
+                          <input
+                            type="search"
+                            value={seoulSearch}
+                            onChange={(e) => setSeoulSearch(e.target.value)}
+                            placeholder="동 또는 구 이름으로 찾기 (예: 역삼동, 명동, 잠실동)"
+                            aria-label="서울 동 또는 구 이름 검색"
+                            className="min-h-[52px] w-full rounded-2xl border border-zinc-300 bg-stone-50 py-3 pr-4 pl-12 text-base font-medium text-zinc-900 placeholder:text-zinc-400 focus:border-blue-800 focus:bg-white focus:outline-none"
+                          />
+                        </div>
+
+                        {seoulSearch.trim().length === 0 && (
+                          <div>
+                            <p className="mb-2.5 text-sm font-semibold text-zinc-600">
+                              먼저 구를 선택하세요
+                            </p>
+                            <div className="grid grid-cols-3 gap-2 sm:grid-cols-5">
+                              {selectedCity.districts.map((district) => {
+                                const isDistSelected =
+                                  selectedSeoulDistrict === district;
+                                return (
+                                  <button
+                                    key={district}
+                                    type="button"
+                                    aria-pressed={isDistSelected}
+                                    onClick={() => setSelectedSeoulDistrict(district)}
+                                    className={`min-h-[44px] rounded-xl px-2.5 py-2 text-[15px] font-bold whitespace-nowrap transition-colors ${
+                                      isDistSelected
+                                        ? 'bg-zinc-900 text-white'
+                                        : 'bg-stone-100 text-zinc-700 hover:bg-stone-200'
+                                    }`}
+                                  >
+                                    {district}
+                                  </button>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    <div>
+                      {selectedCity.id === 'seoul' && (
+                        <p className="mb-2.5 text-sm font-semibold text-zinc-600">
+                          {seoulSearch.trim().length > 0
+                            ? `'${seoulSearch.trim()}' 검색 결과`
+                            : `${selectedSeoulDistrict}의 동 선택`}
+                        </p>
+                      )}
+
+                      {visibleSubRegions.length === 0 ? (
+                        <p className="rounded-2xl bg-stone-50 px-4 py-6 text-center text-base font-medium text-zinc-500">
+                          일치하는 동 이름이 없어요. 구 이름으로 먼저 선택해 보세요.
+                        </p>
+                      ) : (
+                        <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3">
+                          {visibleSubRegions.map((sub) => {
+                            const isSubSelected = selectedSubRegionId === sub.id;
+                            return (
+                              <button
+                                key={sub.id}
+                                type="button"
+                                aria-pressed={isSubSelected}
+                                onClick={() =>
+                                  handleSelectSubRegion(selectedCity, sub)
+                                }
+                                className={`min-h-[52px] rounded-2xl px-3.5 py-2.5 text-base font-bold transition-all focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-800 active:scale-[0.98] ${
+                                  isSubSelected
+                                    ? 'border-[3px] border-blue-800 bg-blue-50 text-blue-950 shadow-sm'
+                                    : 'border border-zinc-200 bg-stone-50 text-zinc-800 hover:border-zinc-400 hover:bg-white'
+                                }`}
+                              >
+                                {seoulSearch.trim().length > 0 && sub.district
+                                  ? `${sub.district} ${sub.name}`
+                                  : sub.name}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </section>
+
+              {/* 오른쪽 영역: 오늘 날씨 결과 카드 */}
+              <section
+                aria-labelledby="weather-result-heading"
+                className="rounded-3xl border border-zinc-200 bg-white p-5 sm:p-6 lg:col-span-5"
+              >
+                <div className="mb-4 flex items-center justify-between gap-2">
+                  <h2
+                    id="weather-result-heading"
+                    className="text-xl font-bold text-zinc-900"
+                  >
+                    오늘 날씨
+                  </h2>
+                  {selectedLocation && (
+                    <span className="text-sm font-semibold text-blue-800">
+                      {selectedLocation.label}
+                    </span>
+                  )}
+                </div>
+
+                {weatherStatus === 'idle' && (
+                  <div className="rounded-2xl bg-stone-50 px-5 py-10 text-center">
+                    <p className="text-lg font-semibold text-zinc-700">
+                      지역을 선택하면 오늘 날씨를 바로 보여드려요.
+                    </p>
+                    <p className="mt-1.5 text-sm text-zinc-500">
+                      서울은 동 단위, 그 외 지역은 군·구 단위로 고를 수 있어요.
+                    </p>
+                  </div>
+                )}
+
+                {weatherStatus === 'loading' && (
+                  <div
+                    role="status"
+                    aria-live="polite"
+                    className="flex flex-col items-center justify-center gap-3 rounded-2xl bg-stone-50 px-5 py-12 text-center"
+                  >
+                    <Loader2Icon className="h-9 w-9 animate-spin text-blue-800" />
+                    <p className="text-xl font-bold text-zinc-800">
+                      날씨를 확인하는 중…
+                    </p>
+                  </div>
+                )}
+
+                {weatherStatus === 'error' && (
+                  <div
+                    role="alert"
+                    className="space-y-4 rounded-2xl border border-rose-200 bg-rose-50 px-5 py-8 text-center"
+                  >
+                    <p className="text-base font-bold text-rose-900">
+                      {weatherError}
+                    </p>
+                    {selectedLocation && (
+                      <button
+                        type="button"
+                        onClick={() =>
+                          loadWeatherForCoords(
+                            selectedLocation.latitude,
+                            selectedLocation.longitude
+                          )
+                        }
+                        className="inline-flex min-h-[48px] cursor-pointer items-center gap-2 rounded-xl bg-rose-900 px-5 py-2.5 text-base font-bold text-white hover:bg-rose-800"
+                      >
+                        <RefreshCwIcon className="h-4 w-4" />
+                        <span>다시 확인하기</span>
+                      </button>
+                    )}
+                  </div>
+                )}
+
+                {weatherStatus === 'success' && weather && (
+                  <div className="space-y-6">
+                    <div className="rounded-2xl border border-blue-100 bg-blue-50/70 p-5 sm:p-6">
+                      <p className="text-2xl leading-relaxed font-extrabold text-zinc-900 tabular-nums sm:text-[26px]">
+                        {weather.weatherEmoji} 지금 {weather.temperature}℃ (체감{' '}
+                        {weather.apparentTemperature}℃) · {weather.weatherLabel} / 오늘
+                        최저 {weather.minTemp}℃ · 최고 {weather.maxTemp}℃ · 비 올 확률{' '}
+                        {weather.precipitationProbability}%
+                      </p>
+                    </div>
+
+                    <dl className="grid grid-cols-2 gap-4 border-t border-zinc-100 pt-4 text-left tabular-nums">
+                      <div className="space-y-1">
+                        <dt className="text-sm font-medium text-zinc-500">
+                          지금 기온 / 체감
+                        </dt>
+                        <dd className="text-xl font-bold text-zinc-900">
+                          {weather.temperature}℃{' '}
+                          <span className="text-base font-semibold text-zinc-500">
+                            (체감 {weather.apparentTemperature}℃)
+                          </span>
+                        </dd>
+                      </div>
+
+                      <div className="space-y-1">
+                        <dt className="text-sm font-medium text-zinc-500">
+                          날씨 상태
+                        </dt>
+                        <dd className="text-xl font-bold text-zinc-900">
+                          {weather.weatherEmoji} {weather.weatherLabel}
+                        </dd>
+                      </div>
+
+                      <div className="space-y-1">
+                        <dt className="text-sm font-medium text-zinc-500">
+                          오늘 최저 · 최고
+                        </dt>
+                        <dd className="text-xl font-bold text-zinc-900">
+                          {weather.minTemp}℃ / {weather.maxTemp}℃
+                        </dd>
+                      </div>
+
+                      <div className="space-y-1">
+                        <dt className="text-sm font-medium text-zinc-500">
+                          비 올 확률
+                        </dt>
+                        <dd className="text-xl font-bold text-zinc-900">
+                          {weather.precipitationProbability}%
+                        </dd>
+                      </div>
+                    </dl>
+                  </div>
+                )}
+              </section>
+            </div>
+
+            {/* 하단 버튼 영역: 이전 + 🤖 옷차림 추천받기 */}
+            <div className="space-y-3 border-t border-zinc-200 pt-6">
+              {recommendNotice && (
+                <div
+                  role="status"
+                  aria-live="polite"
+                  className="rounded-2xl border border-blue-200 bg-blue-50 px-4 py-3 text-center text-base font-semibold text-blue-900"
+                >
+                  {recommendNotice}
+                </div>
+              )}
+
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-12">
+                <button
+                  type="button"
+                  onClick={onBack}
+                  className="flex min-h-[60px] cursor-pointer items-center justify-center gap-2 rounded-2xl border border-zinc-300 bg-white px-6 py-4 text-xl font-bold text-zinc-800 transition-colors hover:bg-stone-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-800 active:scale-[0.99] sm:col-span-4"
+                >
+                  <ArrowLeftIcon className="h-6 w-6 shrink-0" />
+                  <span>이전</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={handleRecommendClick}
+                  className="flex min-h-[60px] cursor-pointer items-center justify-center gap-2 rounded-2xl bg-blue-900 px-6 py-4 text-xl font-bold text-white shadow-md transition-all hover:bg-blue-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-800 active:scale-[0.99] sm:col-span-8"
+                >
+                  <span>🤖 옷차림 추천받기</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        );
+      }
+
+      // ---- 루트 앱 ----
+      function App() {
+        const [step, setStep] = useState(1);
+        const [profile, setProfile] = useState({
+          ageGroup: null,
+          gender: null,
+          style: null,
+        });
+
+        const handleAgeGroupChange = (ageGroup) => {
+          setProfile((prev) => ({ ...prev, ageGroup }));
+        };
+
+        const handleGenderChange = (gender) => {
+          setProfile((prev) => ({ ...prev, gender }));
+        };
+
+        const handleStyleChange = (style) => {
+          setProfile((prev) => ({ ...prev, style }));
+        };
+
+        const handleGoNext = () => {
+          setStep(2);
+          window.scrollTo({ top: 0, behavior: 'smooth' });
+        };
+
+        const handleGoBack = () => {
+          setStep(1);
+          window.scrollTo({ top: 0, behavior: 'smooth' });
+        };
+
+        return (
+          <div className="min-h-dvh bg-[#f8f7f4] text-zinc-900">
+            <header className="sticky top-0 z-30 border-b border-zinc-200/80 bg-[#f8f7f4]/90 backdrop-blur-md">
+              <div className="mx-auto flex max-w-5xl items-center justify-between gap-8 px-4 py-3.5 sm:px-6">
+                <span className="text-xl font-extrabold tracking-tight text-zinc-900 whitespace-nowrap shrink-0">
+                  앙드레2
+                </span>
+
+                <nav
+                  aria-label="진행 단계"
+                  className="flex items-center gap-2 text-sm font-semibold whitespace-nowrap shrink-0"
+                >
+                  <span
+                    className={step === 1 ? 'text-blue-900' : 'text-zinc-400'}
+                    aria-current={step === 1 ? 'step' : undefined}
+                  >
+                    1. 나에 대해
+                  </span>
+                  <span aria-hidden="true" className="text-zinc-300">
+                    ·
+                  </span>
+                  <span
+                    className={step === 2 ? 'text-blue-900' : 'text-zinc-400'}
+                    aria-current={step === 2 ? 'step' : undefined}
+                  >
+                    2. 오늘 날씨
+                  </span>
+                </nav>
+              </div>
+            </header>
+
+            <main className="mx-auto max-w-5xl px-4 py-6 sm:px-6 sm:py-10">
+              {step === 1 ? (
+                <AboutMeStep
+                  profile={profile}
+                  onChangeAgeGroup={handleAgeGroupChange}
+                  onChangeGender={handleGenderChange}
+                  onChangeStyle={handleStyleChange}
+                  onNext={handleGoNext}
+                />
+              ) : (
+                <WeatherStep onBack={handleGoBack} />
+              )}
+            </main>
+          </div>
+        );
+      }
+
+      const root = ReactDOM.createRoot(document.getElementById('root'));
+      root.render(<App />);
+    </script>
+  </body>
+</html>
